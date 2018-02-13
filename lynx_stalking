@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# - ! - #
+# Autor: Carlos E. Vieira
+
+import requests
+import sys
+import os
+import re
+import json
+import whois
+from colors import *
+
+
+def banner():
+	os.system("cls" if os.name == "nt" else "clear")
+	prGreen('''
+ /$$                                             /$$$$$$   /$$               /$$ /$$       /$$                    
+| $$                                            /$$__  $$ | $$              | $$| $$      |__/                    
+| $$       /$$   /$$ /$$$$$$$  /$$   /$$       | $$  \__//$$$$$$    /$$$$$$ | $$| $$   /$$ /$$ /$$$$$$$   /$$$$$$ 
+| $$      | $$  | $$| $$__  $$|  $$ /$$//$$$$$$|  $$$$$$|_  $$_/   |____  $$| $$| $$  /$$/| $$| $$__  $$ /$$__  $$
+| $$      | $$  | $$| $$  \ $$ \  $$$$/|______/ \____  $$ | $$      /$$$$$$$| $$| $$$$$$/ | $$| $$  \ $$| $$  \ $$
+| $$      | $$  | $$| $$  | $$  >$$  $$         /$$  \ $$ | $$ /$$ /$$__  $$| $$| $$_  $$ | $$| $$  | $$| $$  | $$
+| $$$$$$$$|  $$$$$$$| $$  | $$ /$$/\  $$       |  $$$$$$/ |  $$$$/|  $$$$$$$| $$| $$ \  $$| $$| $$  | $$|  $$$$$$$
+|________/ \____  $$|__/  |__/|__/  \__/        \______/   \___/   \_______/|__/|__/  \__/|__/|__/  |__/ \____  $$
+           /$$  | $$                                                                                     /$$  \ $$
+          |  $$$$$$/                                                                                    |  $$$$$$/
+           \______/                                                                                      \______/ 
+	
+''')
+
+banner()
+
+def dumpinfo(data):
+	print("\n")
+	prGreen("[?] Status: " + data['status'])
+	prGreen("[!] CNPJ: " + data['cnpj'])
+	prGreen("[A] Nome: " + data['nome'])
+	prGreen("[0] Data de abertura: " + data['abertura'])
+	prGreen("[$] Capital social: " + data['capital_social'])
+	prGreen("[^] Outros nomes: " + data['fantasia'])
+	prGreen("[>] Atividade: " + data['atividade_principal'][0]['text'].encode('utf-8'))
+
+	if(len(data['atividades_secundarias']) > 0):
+		prGreen("[>] Atividades Secundárias:")
+		for atividade in data['atividades_secundarias']:
+			prGreen("\t [+]" + atividade['text'].encode("utf-8"))
+
+def retirarcaracteres(cnpj):
+	prYellow("[~] Filtrando dados...")
+	filtro = re.compile('([0-9]+)')
+	resp = filtro.findall(cnpj)
+	return resp
+
+def buscainfo(cnpj):
+	base = "https://www.receitaws.com.br/v1/cnpj/"
+	request = requests.get(base + cnpj[0])
+	data = json.loads(request.text)
+	if(data['status'] == "ERROR"):
+		prRed("[X] Ops, ocorreu um erro: %s"%data['message'].encode('utf-8'))
+		prYellow("[!] CNPJ Informado: %s"%cnpj[0])
+	else:
+		dumpinfo(data)
+def boot():
+
+	if(len(sys.argv) < 2):
+		prRed("[+] Use: ./lynx_stalking dominio")
+		prYellow("[:] Exemplo: ./lynx_stalking site.com")
+
+	else:
+		prYellow("[~] Buscando informações sobre: %s"%(sys.argv[1]))
+		inf = whois.whois(sys.argv[1])
+		if(inf.ownerif == "None"):
+			prRed("[X] Ops, parece que esse domínio não existe!")
+		else:
+			cnpj = re.sub('[^A-Za-z0-9]+', '', inf.ownerid)
+			cnpj = retirarcaracteres(cnpj)
+			buscainfo(cnpj)
+boot()
